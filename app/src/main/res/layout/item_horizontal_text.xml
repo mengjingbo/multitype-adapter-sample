@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layout xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <data>
+
+        <variable
+            name="data"
+            type="com.multitype.adapter.sample.binder.HorizontalItemBinder" />
+    </data>
+
+    <TextView
+        android:id="@+id/theme_index"
+        android:layout_width="100dp"
+        android:layout_height="150dp"
+        android:background="#DDDDDD"
+        android:gravity="center"
+        android:onClick="@{(view) -> data.onClick(view, data)}"
+        android:text="@{data.index}" />
+</layout>
