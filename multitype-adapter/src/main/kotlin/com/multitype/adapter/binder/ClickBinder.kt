@@ -2,13 +2,14 @@ package com.multitype.adapter.binder
 
 import android.view.View
 import androidx.viewbinding.BuildConfig
+import com.multitype.adapter.callback.OnViewClickListener
 
 /**
  * date          : 2019/5/31
- * author        : 秦川·小将
+ * author        : 蒙景博
  * description   :
  */
-open class ClickBinder {
+open class ClickBinder: OnViewClickListener {
 
     protected open var mOnClickListener: ((view: View, any: Any?) -> Unit)? = null
 
@@ -33,11 +34,11 @@ open class ClickBinder {
     /**
      * 触发View点击事件时回调，携带参数
      */
-    open fun onClick(view: View) {
+    override fun onClick(view: View) {
         onClick(view, this)
     }
 
-    open fun onClick(view: View, any: Any?) {
+    override fun onClick(view: View, any: Any?) {
         if (mOnClickListener != null) {
             mOnClickListener?.invoke(view, any)
         } else {
@@ -48,11 +49,11 @@ open class ClickBinder {
     /**
      * 触发View长按事件时回调，携带参数
      */
-    open fun onLongClick(view: View) {
+    override fun onLongClick(view: View) {
         onLongClick(view, this)
     }
 
-    open fun onLongClick(view: View, any: Any?){
+    override fun onLongClick(view: View, any: Any?){
         if (mOnLongClickListener != null) {
             mOnLongClickListener?.invoke(view, any)
         } else {
