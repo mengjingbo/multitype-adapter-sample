@@ -17,4 +17,12 @@ interface OnViewClickListener {
     fun onClick(view: View, any: Any?) {
 
     }
+
+    fun onLongClick(view: View) {
+        onLongClick(view, null)
+    }
+
+    fun onLongClick(view: View, any: Any?) {
+
+    }
 }
