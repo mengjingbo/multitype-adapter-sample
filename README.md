@@ -612,4 +612,3 @@ public final class AsyncDifferConfig<T> {
 ```
 最近github访问特别慢，项目已经上传至码云，有兴趣的小伙伴可以前往下载看看，记得点赞哦~~~
 ##### [码云Gitee](https://gitee.com/mengjingbo/multitype-adapter-sample)
-##### [Github](https://github.com/mengjingbo/multitype-adapter-sample)
