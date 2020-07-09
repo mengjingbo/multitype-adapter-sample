@@ -12,8 +12,9 @@ import com.multitype.adapter.holder.MultiTypeViewHolder
  * date          : 2019/5/31
  * author        : 秦川·小将
  * description   :
+ * @param layoutManager 将LayoutManager向外扩展
  */
-class MultiTypeAdapter: RecyclerView.Adapter<MultiTypeViewHolder>() {
+class MultiTypeAdapter constructor(val layoutManager: RecyclerView.LayoutManager): RecyclerView.Adapter<MultiTypeViewHolder>() {
 
     // 使用后台线程通过差异性计算来更新列表
     private val mAsyncListChange by lazy { AsyncListDiffer(this, DiffItemCallback<MultiTypeBinder<*>>()) }
@@ -63,6 +64,8 @@ class MultiTypeAdapter: RecyclerView.Adapter<MultiTypeViewHolder>() {
 
     @Suppress("UNCHECKED_CAST")
     override fun onBindViewHolder(holder: MultiTypeViewHolder, position: Int) {
-        holder.onBindViewHolder(mAsyncListChange.currentList[position] as MultiTypeBinder<ViewDataBinding>)
+        val mCurrentBinder = mAsyncListChange.currentList[position] as MultiTypeBinder<ViewDataBinding>
+        holder.itemView.tag = mCurrentBinder.layoutId()
+        holder.onBindViewHolder(mCurrentBinder)
     }
 }
