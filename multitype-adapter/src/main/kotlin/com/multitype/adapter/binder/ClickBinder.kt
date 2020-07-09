@@ -6,7 +6,7 @@ import com.multitype.adapter.callback.OnViewClickListener
 
 /**
  * date          : 2019/5/31
- * author        : 蒙景博
+ * author        : 秦川·小将
  * description   :
  */
 open class ClickBinder: OnViewClickListener {
