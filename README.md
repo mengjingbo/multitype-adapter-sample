@@ -1,4 +1,5 @@
 
+
 ## 前言
 在RecyclerView实现多种Item类型列表时，有很多种实现方式，这里结合  **AsyncListDiffer+DataBinding+Lifecycles** 实现一种简单，方便，快捷并以数据驱动UI变化的MultiTypeAdapter
 
@@ -10,7 +11,7 @@
 ---
 
 ## 效果图
-![在这里插入图片描述](https://github.com/mengjingbo/multitype-adapter-sample/blob/master/screenshots/multitype-adapter.jpg)
+![在这里插入图片描述](https://img-blog.csdnimg.cn/20200521155222456.jpg?x-oss-process=image/watermark,type_ZmFuZ3poZW5naGVpdGk,shadow_10,text_aHR0cHM6Ly9ibG9nLmNzZG4ubmV0L21qYjAwMDAw,size_16,color_FFFFFF,t_70#pic_center)
 
  ## 1. 定义一个基类MultiTypeBinder方便统一实现与管理
  
@@ -118,7 +119,7 @@ abstract class MultiTypeBinder<V : ViewDataBinding> : ClickBinder() {
 ## 2.处理MultiTypeBinder中View的点击事件
 在ClickBinder中提供了两种事件点击方式 onClick 和 onLongClick，分别提供了携带参数和未带参数方法
 ```kotlin
-open class ClickBinder {
+open class ClickBinder: OnViewClickListener {
 
     protected open var mOnClickListener: ((view: View, any: Any?) -> Unit)? = null
 
@@ -143,11 +144,11 @@ open class ClickBinder {
     /**
      * 触发View点击事件时回调，携带参数
      */
-    open fun onClick(view: View) {
+    override fun onClick(view: View) {
         onClick(view, this)
     }
 
-    open fun onClick(view: View, any: Any?) {
+    override fun onClick(view: View, any: Any?) {
         if (mOnClickListener != null) {
             mOnClickListener?.invoke(view, any)
         } else {
@@ -158,30 +159,16 @@ open class ClickBinder {
     /**
      * 触发View长按事件时回调，携带参数
      */
-    open fun onLongClick(view: View) {
+    override fun onLongClick(view: View) {
         onLongClick(view, this)
     }
 
-    open fun onLongClick(view: View, any: Any?){
+    override fun onLongClick(view: View, any: Any?){
         if (mOnLongClickListener != null) {
             mOnLongClickListener?.invoke(view, any)
         } else {
-            if (BuildConfig.DEBUG) throw NullPointerException("OnLongClick事件未绑定!")
+            throw NullPointerException("OnLongClick事件未绑定!")
         }
-    }
-}
-```
-定义接口 OnViewClickListener ，若是给 Binder 中的 View 添加点击事件时，可实现此接口。
-```kotlin
-interface OnViewClickListener {
-
-    // 不需要额外参数事件时，默认转发给带额外参数事件
-    fun onClick(view: View) {
-        onClick(view, null)
-    }
-
-    fun onClick(view: View, any: Any?) {
-
     }
 }
 ```
@@ -219,14 +206,8 @@ class MultiTypeViewHolder(private val binding: ViewDataBinding) : RecyclerView.V
 > - areContentsTheSame(oldItem: T, newItem: T)：比较两次MultiTypeBinder的类容是否一致。
 ```kotlin
 class DiffItemCallback<T : MultiTypeBinder<*>> : DiffUtil.ItemCallback<T>() {
-	
-    override fun areItemsTheSame(oldItem: T, newItem: T): Boolean {
-        return oldItem.layoutId() == newItem.layoutId()
-    }
-    
-    override fun areContentsTheSame(oldItem: T, newItem: T): Boolean {
-        return oldItem.hashCode() == newItem.hashCode() && oldItem.areContentsTheSame(newItem)
-    }
+    override fun areItemsTheSame(oldItem: T, newItem: T): Boolean = oldItem.layoutId() == newItem.layoutId()
+    override fun areContentsTheSame(oldItem: T, newItem: T): Boolean = oldItem.hashCode() == newItem.hashCode() && oldItem.areContentsTheSame(newItem)
 }
 ```
 ## 5.定义MultiTypeAdapter
@@ -237,12 +218,13 @@ class DiffItemCallback<T : MultiTypeBinder<*>> : DiffUtil.ItemCallback<T>() {
 >- 在 onBindViewHolder(holder: MultiTypeViewHolder, position: Int) 方法中调用 Binder 中的绑定方法，用以绑定数据。
 >-  使用 AsyncListDiffer 工具返回当前列表数据和刷新列表，具体用法下文说明
 ```kotlin
-class MultiTypeAdapter: RecyclerView.Adapter<MultiTypeViewHolder>(){
+// 这里将LayoutManager向外扩展，方便操作RecyclerView滚动平移等操作
+class MultiTypeAdapter constructor(val layoutManager: RecyclerView.LayoutManager): RecyclerView.Adapter<MultiTypeViewHolder>() {
 
     // 使用后台线程通过差异性计算来更新列表
     private val mAsyncListChange by lazy { AsyncListDiffer(this, DiffItemCallback<MultiTypeBinder<*>>()) }
 
-    // 存储 Layout 和 Layout Type
+    // 存储 MultiTypeBinder 和 MultiTypeViewHolder Type
     private var mHashCodeViewType = LinkedHashMap<Int, MultiTypeBinder<*>>()
 
     init {
@@ -257,9 +239,9 @@ class MultiTypeAdapter: RecyclerView.Adapter<MultiTypeViewHolder>(){
         mAsyncListChange.submitList(mHashCodeViewType.map { it.value })
     }
 
-    fun notifyAdapterChanged(binders: MultiTypeBinder<*>) {
+    fun notifyAdapterChanged(binder: MultiTypeBinder<*>) {
         mHashCodeViewType = LinkedHashMap()
-        mHashCodeViewType[binders.hashCode()] = binders
+        mHashCodeViewType[binder.hashCode()] = binder
         mAsyncListChange.submitList(mHashCodeViewType.map { it.value })
     }
 
@@ -287,7 +269,9 @@ class MultiTypeAdapter: RecyclerView.Adapter<MultiTypeViewHolder>(){
 
     @Suppress("UNCHECKED_CAST")
     override fun onBindViewHolder(holder: MultiTypeViewHolder, position: Int) {
-        holder.onBindViewHolder(mAsyncListChange.currentList[position] as MultiTypeBinder<ViewDataBinding>)
+        val mCurrentBinder = mAsyncListChange.currentList[position] as MultiTypeBinder<ViewDataBinding>
+        holder.itemView.tag = mCurrentBinder.layoutId()
+        holder.onBindViewHolder(mCurrentBinder)
     }
 }
 ```
@@ -298,7 +282,7 @@ class MultiTypeAdapter: RecyclerView.Adapter<MultiTypeViewHolder>(){
  */
 fun createMultiTypeAdapter(recyclerView: RecyclerView, layoutManager: RecyclerView.LayoutManager): MultiTypeAdapter {
     recyclerView.layoutManager = layoutManager
-    val mMultiTypeAdapter = MultiTypeAdapter()
+    val mMultiTypeAdapter = MultiTypeAdapter(layoutManager)
     recyclerView.adapter = mMultiTypeAdapter
     // 处理RecyclerView的触发回调
     recyclerView.addOnAttachStateChangeListener(object : View.OnAttachStateChangeListener {
@@ -348,36 +332,52 @@ private val mAdapter by lazy { createMultiTypeAdapter(binding.recyclerView, Line
 ```
 - 将 Binder 添加到 Adapter 中
 ```kotlin
-val mBinders = mutableListOf<MultiTypeBinder<*>>()
-(0..1).forEach {
-    mBinders.add(ItemBinder("$it").apply {
-    	setOnClickListener(this@MainActivity::onClick)
-    })
-}
-mBinders.add(GridViewBinder((0..11).map { it }).apply {
-	setOnClickListener(this@MainActivity::onClick)
-})
-(0..2).forEach {
-    mBinders.add(ItemBinder("$it").apply {
+mAdapter.notifyAdapterChanged(mutableListOf<MultiTypeBinder<*>>().apply {
+    add(TopBannerBinder().apply {
         setOnClickListener(this@MainActivity::onClick)
     })
-}
-mBinders.add(HorizontalScrollBinder((0..11).map { it }))
-(0..2).forEach {
-    mBinders.add(ItemBinder("$it").apply {
-    	setOnClickListener(this@MainActivity::onClick)
-    })
-}
-mAdapter.notifyAdapterChanged(mBinders)
+    add(CategoryContainerBinder(listOf("男装", "女装", "鞋靴", "内衣内饰", "箱包", "美妆护肤", "洗护", "腕表珠宝", "手机", "数码").map {
+        CategoryItemBinder(it).apply {
+            setOnClickListener(this@MainActivity::onClick)
+        }
+    }))
+    add(RecommendContainerBinder((1..8).map { RecommendGoodsBinder().apply {
+        setOnClickListener(this@MainActivity::onClick)
+    } }))
+    add(HorizontalScrollBinder((0..11).map { HorizontalItemBinder("$it").apply {
+        setOnClickListener(this@MainActivity::onClick)
+    } }))
+    add(GoodsGridContainerBinder((1..20).map { GoodsBinder(it).apply {
+        setOnClickListener(this@MainActivity::onClick)
+    } }))
+})
 ```
 - 点击事件处理，在Activity或Fragment中实现 OnViewClickListener 接口，重写 onClick 方法
 ```kotlin
-override fun onClick(view: View, any: Any?) {
-	if (view.id == R.id.multi_type_item_text) {
-    	any as ItemBinder
-        Log.e(this.javaClass.simpleName, "${any.index}被点击")
+    override fun onClick(view: View, any: Any?) {
+        when(view.id) {
+            R.id.top_banner -> {
+                any as TopBannerBinder
+                toast(view, "点击Banner")
+            }
+            R.id.category_tab -> {
+                any as CategoryItemBinder
+                toast(view,"点击分类+${any.title}")
+            }
+            R.id.recommend_goods -> {
+                any as RecommendGoodsBinder
+                toast(view, "点击精选会场Item")
+            }
+            R.id.theme_index -> {
+                any as HorizontalItemBinder
+                toast(view, "点击主题会场${any.index}")
+            }
+            R.id.goods_container -> {
+                any as GoodsBinder
+                toast(view, "点击商品${any.index}")
+            }
+        }
     }
-}
 ```
 ## 8.AsyncListDiffer
 一个在后台线程中使用DiffUtil计算两个列表之间的差异的辅助类。AsyncListDiffer 的计算主要submitList 方法中。
@@ -610,3 +610,6 @@ public final class AsyncDifferConfig<T> {
     }
 }
 ```
+最近github访问特别慢，项目已经上传至码云，有兴趣的小伙伴可以前往下载看看，记得点赞哦~~~
+##### [码云Gitee](https://gitee.com/mengjingbo/multitype-adapter-sample)
+##### [Github](https://github.com/mengjingbo/multitype-adapter-sample)
