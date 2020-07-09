@@ -18,7 +18,7 @@ import androidx.recyclerview.widget.RecyclerView
  */
 fun createMultiTypeAdapter(recyclerView: RecyclerView, layoutManager: RecyclerView.LayoutManager): MultiTypeAdapter {
     recyclerView.layoutManager = layoutManager
-    val mMultiTypeAdapter = MultiTypeAdapter()
+    val mMultiTypeAdapter = MultiTypeAdapter(layoutManager)
     recyclerView.adapter = mMultiTypeAdapter
     // 处理RecyclerView的触发回调
     recyclerView.addOnAttachStateChangeListener(object : View.OnAttachStateChangeListener {
